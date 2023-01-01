@@ -308,9 +308,100 @@ function M.handlers.pdf_handler(pdf_path, cache_path, options)
   return NO_PREVIEW
 end
 
+function M.handlers.epub_handler(epub_path, cache_path, options)
+  local sha_path = M.encode_name(epub_path, uv.fs_stat(epub_path).ino) .. ".jpg"
+  local cached_path = cache_path.filename .. "/" .. sha_path
+  if M.caches[sha_path] then
+    return cached_path
+  end
+
+  Job:new({
+    command = "epub-thumbnailer",
+    args = {
+      epub_path,
+      cached_path,
+      "2000",
+    },
+    interactive = false,
+    enable_handlers = false,
+    enable_recording = false,
+    on_exit = function(_, code, _)
+      if code == 0 then
+        M.caches[sha_path] = true
+      else
+        Job:new({
+          command = "ebook-meta",
+          args = {
+            "--get-cover",
+            cached_path,
+            epub_path,
+          },
+          interactive = false,
+          enable_handlers = false,
+          enable_recording = false,
+          on_exit = function(_, child_code, _)
+            if child_code == 0 then
+              M.caches[sha_path] = true
+            end
+          end,
+        }):start()
+      end
+    end,
+  }):start()
+  return NO_PREVIEW
+end
+
+---@todo
+function M.handlers.zip_handler(zip_path, cache_path, options)
+  local sha_path = M.encode_name(zip_path, uv.fs_stat(zip_path).ino) .. ".jpg"
+  local cached_path = cache_path.filename .. "/" .. sha_path
+  if M.caches[sha_path] then
+    return cached_path
+  end
+
+  Job:new({
+    command = "zipinfo",
+    args = { "-1", zip_path },
+    interactive = false,
+    enable_handlers = false,
+    enable_recording = false,
+    on_exit = function(result, code, _)
+      if code == 0 then
+        M.caches[sha_path] = true
+      end
+    end,
+  }):start()
+end
+
+---@todo
+function M.handlers.rar_handler(zip_path, cache_path, options) end
+
+---@todo
+function M.handlers.tar_handler(zip_path, cache_path, options) end
+
+---@todo
+function M.handlers.xz_handler(zip_path, cache_path, options) end
+
+---@todo
+function M.handlers.gz_handler(zip_path, cache_path, options) end
+
+---@todo
+function M.handlers.bz2_handler(zip_path, cache_path, options) end
+
+---@todo
+function M.handlers.apk_handler(zip_path, cache_path, options) end
+
+---@todo
+function M.handlers.iso_handler(zip_path, cache_path, options) end
+
+M.supports["PDF"] = M.handlers.pdf_handler
+
 M.supports["GIF"] = M.handlers.gif_handler
 M.supports["EPS"] = M.handlers.gif_handler
-M.supports["PDF"] = M.handlers.pdf_handler
+
+M.supports["EPUB"] = M.handlers.epub_handler
+M.supports["MOBI"] = M.handlers.epub_handler
+M.supports["FB2"] = M.handlers.epub_handler
 
 M.supports["PNG"] = M.handlers.image_handler
 M.supports["JPG"] = M.handlers.image_handler

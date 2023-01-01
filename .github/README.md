@@ -19,6 +19,9 @@ Following are the filetypes that this picker supports.
 
 <summary>Supported filetypes. I think.</summary>
 
+- MOBI
+- FB2
+- EPUB
 - PNG
 - JPG
 - JPEG
@@ -64,7 +67,7 @@ Following are the filetypes that this picker supports.
 
 ```lua
 use({
-  "nvim-telescope/telescope-media-files.nvim",
+  "dharmx/telescope-media.nvim",
   config = function()
     require("telescope").load_extension("media")
   end,
@@ -77,7 +80,7 @@ use({
 
 ## SETUP
 
-``` lua
+```lua
 require("telescope").load_extension("media")
 ```
 
@@ -86,6 +89,7 @@ require("telescope").load_extension("media")
 This extension should be configured using `extensions` field inside Telescope.
 
 ```lua
+--- this is optional
 require("telescope").setup({
   extensions = {
     media = {
@@ -122,12 +126,28 @@ Some of these are optional.
 - [ripgrep](https://github.com/BurntSushi/ripgrep) is optional but we use it by default.
 - [fontforge](https://fontforge.org/en-US/) is for viewing fonts.
 - [poppler-utils](https://poppler.freedesktop.org/) is for viewing PDFs.
+- [epub-thumbnailer](https://github.com/marianosimone/epub-thumbnailer) is for viewing EPUB.
+- [calibre](https://calibre-ebook.com) is for viewing EPUB, FF2 and MOBI.
 
 ## TODOS
 
+<details>
+
+<summary>This is getting out of hand.</summary>
+
 - [ ] Add documentations, briefs and notes.
 - [ ] Add support for archives.
+- [ ] Add viu backend.
+- [ ] Add feh backend.
+- [ ] Add sushi backend.
+- [ ] Add [klook](https://github.com/KDE/klook) backend.
+- [ ] Add [Image-viewer](https://github.com/torum/Image-viewer) backend.
 - [ ] Add support for webpages.
+- [ ] Add support for APK.
+- [ ] Add support for ISO.
+- [ ] Add default text preview.
+- [x] Add default image preview.
+- [x] Add support for ebooks.
 - [x] Add support for Ai/EPS.
 - [x] Add support for vectors.
 - [x] Add support for images.
@@ -137,3 +157,5 @@ Some of these are optional.
 - [x] Add support for pdfs.
 - [x] Add some canned functions for `config.on_confirm`.
 - [x] Improve caching.
+
+</details>

@@ -58,15 +58,17 @@ end
 
 local media_preview = utils.make_default_callable(function(options)
   local cache_path = Path:new(options.cache_path)
-  _G.UEBERZUG = Ueberzug:new(os.tmpname())
-  _G.UEBERZUG:listen()
+  local UEBERZUG = Ueberzug:new(os.tmpname())
+  UEBERZUG:listen()
+
   return previewers.new({
     preview_fn = function(_, entry, _)
       scope.load_caches(cache_path)
       local preview = options.get_preview_window()
       local handler = scope.supports[vim.fn.fnamemodify(entry.value, ":e"):upper()]
+
       if handler then
-        _G.UEBERZUG:send({
+        UEBERZUG:send({
           path = handler(vim.fn.fnamemodify(entry.value, ":p"), cache_path, {
             quality = "30%",
             blurred = "0.02",
@@ -79,8 +81,7 @@ local media_preview = utils.make_default_callable(function(options)
       end
     end,
     teardown = function()
-      _G.UEBERZUG:shutdown()
-      _G.UEBERZUG = nil
+      UEBERZUG:shutdown()
     end,
   })
 end, {})
