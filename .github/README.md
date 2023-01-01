@@ -135,11 +135,49 @@ Some of these are optional.
 
 <summary>This is getting out of hand.</summary>
 
+- [ ] Use image magick instead of fontforge for previewing fonts.
 - [ ] Add documentations, briefs and notes.
+- [ ] Recalibrate preview size when window is moved.
 - [ ] Add support for archives.
-- [ ] Add viu backend.
-- [ ] Add feh backend.
-- [ ] Add sushi backend.
+  - [x] Add ZIP support.
+  - [ ] Add A Support.
+  - [ ] Add ACE Support.
+  - [ ] Add ALZ Support.
+  - [ ] Add ARC Support.
+  - [ ] Add ARJ Support.
+  - [ ] Add CAB Support.
+  - [ ] Add CPIO Support.
+  - [ ] Add DEB Support.
+  - [ ] Add JAR Support.
+  - [ ] Add LHA Support.
+  - [ ] Add LZH Support.
+  - [ ] Add LZMA Support.
+  - [ ] Add LZO Support.
+  - [ ] Add RPM Support.
+  - [ ] Add T7Z Support.
+  - [ ] Add TBZ Support.
+  - [ ] Add TBZ2 Support.
+  - [ ] Add TGZ Support.
+  - [ ] Add TLZ Support.
+  - [ ] Add TXZ Support.
+  - [ ] Add TZ Support.
+  - [ ] Add TZO Support.
+  - [ ] Add WAR Support.
+  - [ ] Add XPI Support.
+  - [ ] Add ZSupport.
+  - [ ] Add TAR support.
+  - [ ] Add GZ support.
+  - [ ] Add XZ support.
+  - [ ] Add RZ support.
+  - [ ] Add TAR support.
+  - [ ] Add 7Z support.
+  - [ ] Add BZ2 support.
+  - [ ] Add BZ support.
+  - [ ] Add LZ support.
+  - [ ] Add RAR support.
+- [ ] Add [viu](https://github.com/atanunq/viu) backend.
+- [ ] Add [feh](https://github.com/derf/feh) backend.
+- [ ] Add [sushi](https://github.com/GNOME/sushi) backend.
 - [ ] Add [klook](https://github.com/KDE/klook) backend.
 - [ ] Add [Image-viewer](https://github.com/torum/Image-viewer) backend.
 - [ ] Add support for webpages.
