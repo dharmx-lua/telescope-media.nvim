@@ -39,7 +39,7 @@ function M.magick(input_path, output_path, options, after)
   })
 end
 
-function M.fontimage(font_path, output_path, options, after)
+function M.fontmagick(font_path, output_path, options, after)
   options = vim.tbl_extend("keep", options, {
     fill = "#000000",
     background = "#FFFFFF",
