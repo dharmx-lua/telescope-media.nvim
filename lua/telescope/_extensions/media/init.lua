@@ -24,7 +24,7 @@ local Config = require("telescope._extensions.media.core.config")
 local Log = require("telescope._extensions.media.core.log")
 
 ---Picker function.
----@param options any
+---@param options MediaConfig telescope-media.nvim configuration table.
 local function media(options)
   options = if_nil(options, {})
   options.backend_options = if_nil(options.backend_options, {})
@@ -36,6 +36,7 @@ local function media(options)
       "**Ueberzug** might not work properly.",
       "Consider using a different backend instead.",
     }
+
     vim.notify_once(table.concat(message, "\n"), vim.log.levels.WARN, {
       title = "telescope-media.nvim",
       prompt_title = "telescope-media.nvim",
@@ -52,18 +53,19 @@ local function media(options)
       actions.close(prompt_buffer)
       if #selections < 2 then
         Log.debug("media(): selections are lesser than 2 - calling Callbacks.on_confirm_single...")
-        options.callbacks.on_confirm_single(actions_state.get_selected_entry())
+        options.callbacks.on_confirm_single(actions_state.get_selected_entry()) -- handle single selections
       else
         Log.debug("media(): selections are greater than 2 - calling Callbacks.on_confirm_multiple...")
         selections = vim.tbl_map(function(item) return item[1] end, selections)
-        options.callbacks.on_confirm_muliple(selections)
+        options.callbacks.on_confirm_muliple(selections) -- handle multiple selections
       end
     end)
     return true
   end)
 
-  options = Config.extend(options)
+  options = Config.extend(options) -- merge and return new value
 
+  -- Adapted from https://github.com/nvim-telescope/telescope.nvim/blob/master/lua/telescope/builtin/__files.lua#L243-L355 {{{
   local command = options.find_command[1]
   if options.search_dirs then
     for key, value in pairs(options.search_dirs) do
@@ -112,6 +114,7 @@ local function media(options)
       end
     end
   end
+  -- }}}
 
   local popup_options = {}
   function options.get_preview_window() return popup_options.preview end
@@ -123,12 +126,13 @@ local function media(options)
     sorter = config.values.file_sorter(options),
   })
 
+  -- current height (lines) of the terminal for ueberzug
   local line_count = vim.o.lines - vim.o.cmdheight
   if vim.o.laststatus ~= 0 then line_count = line_count - 1 end
 
   ---@diagnostic disable-next-line: undefined-field
   popup_options = picker:get_window_options(vim.o.columns, line_count)
-  Log.debug("_media(): picker has been opened")
+  Log.debug("media(): picker has been opened")
   picker:find()
 end
 
