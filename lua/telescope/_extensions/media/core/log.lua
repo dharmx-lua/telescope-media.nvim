@@ -1,6 +1,6 @@
 local M = {}
 
-local Log = require("plenary.log")
+local Log = require("telescope._extensions.media.lib.log")
 local Config = require("telescope._extensions.media.core.config").get()
 
 ---@class Log

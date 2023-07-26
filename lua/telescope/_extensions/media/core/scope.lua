@@ -46,24 +46,24 @@ function M.cleanup(cache_path)
   })
 end
 
-local function _encode_options(filepath, cache_path, options)
+local function encode_options(filepath, cache_path, options)
   if options.alias then filepath = options.alias end
   ---@diagnostic disable-next-line: param-type-mismatch
   local encoded_path = sha.sha512(uv.fs_stat(filepath).ino .. filepath):upper() .. ".jpg"
   local cached_path = cache_path.filename .. "/" .. encoded_path
-  Log.debug("_encode_options(): created cache entry: " .. cached_path .. " from: " .. filepath)
+  Log.debug("encode_options(): created cache entry: " .. cached_path .. " from: " .. filepath)
   return if_nil(M.caches[encoded_path] and cached_path, false), encoded_path, cached_path
 end
 
 function M.handlers.image_handler(image_path, cache_path, options)
-  local in_cache, sha_path, cached_path = _encode_options(image_path, cache_path, options)
+  local in_cache, sha_path, cached_path = encode_options(image_path, cache_path, options)
   if in_cache then return in_cache end
   engine.magick(image_path, cached_path, options, function() M.caches[sha_path] = true end)
   return image_path
 end
 
 function M.handlers.font_handler(font_path, cache_path, options)
-  local in_cache, sha_path, cached_path = _encode_options(font_path, cache_path, options)
+  local in_cache, sha_path, cached_path = encode_options(font_path, cache_path, options)
   if in_cache then return in_cache end
   engine.fontmagick(font_path, cached_path, options, function(self, _)
     if self.code == 0 then M.caches[sha_path] = true end
@@ -72,7 +72,7 @@ function M.handlers.font_handler(font_path, cache_path, options)
 end
 
 function M.handlers.video_handler(video_path, cache_path, options)
-  local in_cache, sha_path, cached_path = _encode_options(video_path, cache_path, options)
+  local in_cache, sha_path, cached_path = encode_options(video_path, cache_path, options)
   if in_cache then return in_cache end
   engine.ffmpeg(video_path, cached_path, options, function(_, code, _)
     if code == 0 then
@@ -87,7 +87,7 @@ function M.handlers.video_handler(video_path, cache_path, options)
 end
 
 function M.handlers.gif_handler(gif_path, cache_path, options)
-  local in_cache, sha_path, cached_path = _encode_options(gif_path, cache_path, options)
+  local in_cache, sha_path, cached_path = encode_options(gif_path, cache_path, options)
   if in_cache then return in_cache end
   options.index = "[0]"
   engine.magick(gif_path, cached_path, options, function(_, code, _)
@@ -97,7 +97,7 @@ function M.handlers.gif_handler(gif_path, cache_path, options)
 end
 
 function M.handlers.audio_handler(audio_path, cache_path, options)
-  local in_cache, sha_path, cached_path = _encode_options(audio_path, cache_path, options)
+  local in_cache, sha_path, cached_path = encode_options(audio_path, cache_path, options)
   if in_cache then return in_cache end
   engine.ffmpeg(audio_path, cached_path, options, function(_, code, _)
     if code == 0 then M.caches[sha_path] = true end
@@ -106,7 +106,7 @@ function M.handlers.audio_handler(audio_path, cache_path, options)
 end
 
 function M.handlers.pdf_handler(pdf_path, cache_path, options)
-  local in_cache, sha_path, cached_path = _encode_options(pdf_path, cache_path, options)
+  local in_cache, sha_path, cached_path = encode_options(pdf_path, cache_path, options)
   if in_cache then return in_cache end
   engine.pdftoppm(pdf_path, cached_path, options, function(_, code, _)
     if code == 0 then M.caches[sha_path] = true end
@@ -115,7 +115,7 @@ function M.handlers.pdf_handler(pdf_path, cache_path, options)
 end
 
 function M.handlers.epub_handler(epub_path, cache_path, options)
-  local in_cache, sha_path, cached_path = _encode_options(epub_path, cache_path, options)
+  local in_cache, sha_path, cached_path = encode_options(epub_path, cache_path, options)
   if in_cache then return in_cache end
   engine.epubthumbnailer(epub_path, cached_path, options, function(_, code, _)
     if code == 0 then

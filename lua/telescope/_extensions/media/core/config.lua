@@ -96,7 +96,7 @@ M._defaults = {
   },
   log = {
     plugin = "telescope-media",
-    level = "warn",
+    level = "debug",
     highlights = true,
     use_file = true,
     use_quickfix = false,

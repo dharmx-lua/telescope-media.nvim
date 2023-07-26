@@ -23,6 +23,11 @@ local if_nil = vim.F.if_nil
 local set_lines = vim.api.nvim_buf_set_lines
 local set_option = vim.api.nvim_buf_set_option
 
+---Display a dialog text in the middle of previewer buffer.
+---@param buffer number buffer id.
+---@param window number window id.
+---@param message string message to be display.
+---@param fill string character to pad the message text with.
 local function dialog(buffer, window, message, fill)
   pcall(putil.set_preview_message, buffer, window, message, fill)
 end
@@ -172,14 +177,20 @@ local function filetype_hook(filepath, buffer, options)
     then
       file_cachepath = absolute
     elseif options.backend == "file" then
+      Log.debug("define_preview(): file backend is being used.")
       return redirect(buffer, extension, absolute, options)
     else
+      Log.debug("define_preview(): sending to handler")
       file_cachepath = handler(absolute, options.cache_path, options)
     end
-    if file_cachepath == NULL then return redirect(buffer, extension, absolute, options) end
+    if file_cachepath == NULL then
+      Log.debug("define_preview(): file_cachepath is nil")
+      return redirect(buffer, extension, absolute, options)
+    end
 
     local window_options = options.get_preview_window()
     if options.backend == "ueberzug" then
+      Log.debug("define_preview(): ueberzug started for displaying file_cachepath i.e. " .. file_cachepath)
       options._ueberzug:send({
         path = file_cachepath,
         x = window_options.col + backend_options.xmove,
@@ -187,6 +198,7 @@ local function filetype_hook(filepath, buffer, options)
         width = window_options.width,
         height = window_options.height,
       })
+      dialog(buffer, options.preview.winid, " ", " ")
       return false
     else
       if not ib[backend] then
@@ -197,6 +209,7 @@ local function filetype_hook(filepath, buffer, options)
           "- Has not been registered into the `rifle.bullets` table.",
         }
         vim.notify(table.concat(message, "\n"), ERROR)
+        Log.warn("filetype_hook(): " .. table.concat(message, " "))
         return redirect(buffer, extension, absolute, options)
       end
 
