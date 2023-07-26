@@ -249,7 +249,8 @@ EOF
 <!-- {{{ -->
 Some of these are optional.
 
-- [ueberzug](https://github.com/seebye/ueberzug) is required for viewing images.
+- [ueberzug](https://github.com/ueber-devel/ueberzug) is required for viewing images.
+- [ueberzugpp](https://github.com/jstkdng/ueberzugpp) is required for viewing images.
 - [catimg](https://github.com/posva/catimg) is required for viewing images.
 - [jp2a](https://github.com/cslarsen/jp2a) is required for viewing images
 - [chafa](https://github.com/hpjansson/chafa/) is required for viewing images
@@ -347,6 +348,8 @@ Some of these are optional.
 - [tembokk](https://github.com/tembokk)
 - [telescope](https://github.com/nvim-telescope)
 - [buffer_previewer](https://github.com/nvim-telescope/telescope.nvim/blob/master/lua/telescope/previewers/buffer_previewer.lua)
-- [ueberzug](https://github.com/seebye/ueberzug)
+- [ueberzug-og](https://github.com/seebye/ueberzug)
+- [ueberzug](https://github.com/ueber-devel/ueberzug)
+- [ueberzugpp](https://github.com/jstkdng/ueberzugpp)
 - [lua-sha](https://gist.github.com/PedroAlvesV/ea80f6724df49ace29eed03e7f75b589)
 - [ranger](https://github.com/ranger/ranger/)
