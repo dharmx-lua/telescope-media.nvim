@@ -82,6 +82,7 @@ M._defaults = {
   prompt_title = "Media",
   cwd = vim.fn.getcwd(),
   preview = {
+    check_mime_type = true,
     timeout = 200,
     redraw = false,
     wait = 10,

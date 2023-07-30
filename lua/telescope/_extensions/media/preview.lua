@@ -23,7 +23,9 @@ local if_nil = vim.F.if_nil
 local set_lines = vim.api.nvim_buf_set_lines
 local set_option = vim.api.nvim_buf_set_option
 
----Display a dialog text in the middle of previewer buffer.
+-- NOTE: Using treesitter in previews causes: https://github.com/neovim/neovim/issues/21416
+
+---Display a dialog text in the middle of the previewer buffer.
 ---@param buffer number buffer id.
 ---@param window number window id.
 ---@param message string message to be display.
@@ -32,12 +34,19 @@ local function dialog(buffer, window, message, fill)
   pcall(putil.set_preview_message, buffer, window, message, fill)
 end
 
-local function try_run(command, buffer, options, extension)
+---Sets previewer contents. And displays a error message dialog if
+---the content has problems or if the contents cannot be set entirely.
+---@param command table a command and its arguments.
+---@param buffer number previewer buffer id.
+---@param options table configuration options.
+---@param extension? string filetype.
+---@return false
+local function try_capture(command, buffer, options, extension)
   local task = Job:new(command)
   local ok, result, code = pcall(Job.sync, task, options.preview.timeout, options.preview.wait, options.preview.redraw)
-  if ok then
-    if code == 0 then
-      pcall(set_lines, buffer, 0, -1, false, result)
+  if ok then -- if the job finishes within given time then
+    if code == 0 then -- check if the job finishes successfully
+      pcall(set_lines, buffer, 0, -1, false, result) -- set the preview buffer to the job's stdout
       set_option(buffer, "filetype", if_nil(extension, "text"))
     else
       dialog(buffer, options.preview.winid, "PREVIEWER ERROR", options.preview.fill.error)
@@ -48,15 +57,24 @@ local function try_run(command, buffer, options, extension)
   return false
 end
 
-local function redirect(buffer, extension, absolute, options)
+---Display metadata of a file.
+---@param buffer number previewer buffer id.
+---@param extension string filetype.
+---@param absolute string filepath.
+---@param options table configuration options.
+---@return boolean
+local function display_metadata(buffer, extension, absolute, options)
+  if not options.preview.check_mime_type then return true end
+
   local mime = util.get_os_command_output(fb.file + { "--brief", "--mime-type", absolute })[1]
   local mimetype = vim.split(mime, "/", { plain = true })
   local window = options.preview.winid
   local fill_binary = options.preview.fill.binary
   local fill_file = options.preview.fill.file
 
+  -- switches for different mime types
   if fb.readelf and vim.tbl_contains({ "x-executable", "x-pie-executable", "x-sharedlib" }, mimetype[2]) then
-    return try_run(fb.readelf + absolute, buffer, options)
+    return try_capture(fb.readelf + absolute, buffer, options)
   elseif
     -- Huge list of archive filetypes/extensions. {{{
     vim.tbl_contains({
@@ -97,34 +115,34 @@ local function redirect(buffer, extension, absolute, options)
     -- }}}
   then
     local command = Rifle.orders(absolute, "bsdtar", "atool")
-    if command then return try_run(command, buffer, options) end
+    if command then return try_capture(command, buffer, options) end
   elseif extension == "rar" and fb.unrar then
-    return try_run(fb.unrar + absolute, buffer, options)
+    return try_capture(fb.unrar + absolute, buffer, options)
   elseif extension == "7z" and fb["7z"] then
-    return try_run(fb["7z"] + absolute, buffer, options)
+    return try_capture(fb["7z"] + absolute, buffer, options)
   elseif extension == "pdf" and fb.exiftool then
-    return try_run(fb.exiftool + absolute, buffer, options)
+    return try_capture(fb.exiftool + absolute, buffer, options)
   elseif extension == "torrent" then
     local command = Rifle.orders(absolute, "transmission-show", "aria2c")
-    if command then return try_run(command, buffer, options) end
+    if command then return try_capture(command, buffer, options) end
   elseif vim.tbl_contains({ "odt", "sxw", "ods", "odp" }, extension) then
     local command = Rifle.orders(absolute, "odt2txt", "pandoc")
-    if command then return try_run(command, buffer, options) end
+    if command then return try_capture(command, buffer, options) end
   elseif extension == "xlsx" and fb.xlsx2csv then
-    return try_run(fb.xlsx2csv + absolute, buffer, options)
+    return try_capture(fb.xlsx2csv + absolute, buffer, options)
   elseif Util.any(mime, "wordprocessingml%.document$", "/epub%+zip$", "/x%-fictionbook%+xml$") and fb.pandoc then
-    return try_run(fb.pandoc + absolute, buffer, options, "markdown")
+    return try_capture(fb.pandoc + absolute, buffer, options, "markdown")
   elseif Util.any(mime, "text/rtf$", "msword$") and fb.catdoc then
-    return try_run(fb.catdoc + absolute, buffer, options)
+    return try_capture(fb.catdoc + absolute, buffer, options)
   elseif Util.any(mimetype[2], "ms%-excel$") and fb.xls2csv then
-    return try_run(fb.xls2csv + absolute, buffer, options)
+    return try_capture(fb.xls2csv + absolute, buffer, options)
   elseif Util.any(mime, "message/rfc822$") and fb.mu then
-    return try_run(fb.mu + absolute, buffer, options)
+    return try_capture(fb.mu + absolute, buffer, options)
   elseif Util.any(mime, "^image/vnd%.djvu") then
     local command = Rifle.orders(absolute, "djvutxt", "exiftool")
     if command then return Util.termopen(buffer, command) end
   elseif Util.any(mime, "^image/") and fb.exiftool then
-    return try_run(fb.exiftool + absolute, buffer, options)
+    return try_capture(fb.exiftool + absolute, buffer, options)
   elseif Util.any(mime, "^audio/", "^video/") then
     local command = Rifle.orders(absolute, "mediainfo", "exiftool")
     if command then return Util.termopen(buffer, command) end
@@ -133,17 +151,17 @@ local function redirect(buffer, extension, absolute, options)
     return true
   elseif vim.tbl_contains({ "htm", "html", "xhtml", "xhtm" }, extension) then
     local command = Rifle.orders(absolute, "lynx", "w3m", "elinks", "pandoc")
-    if command then return try_run(command, buffer, options, "markdown") end
+    if command then return try_capture(command, buffer, options, "markdown") end
     return true
   elseif extension == "ipynb" and fb.jupyter then
-    return try_run(fb.jupyter + absolute, buffer, options, "markdown")
+    return try_capture(fb.jupyter + absolute, buffer, options, "markdown")
   elseif mimetype[2] == "json" or extension == "json" then
     local command = Rifle.orders(absolute, "jq", "python")
-    if command then return try_run(command, buffer, options, "json") end
+    if command then return try_capture(command, buffer, options, "json") end
     return true
   elseif vim.tbl_contains({ "dff", "dsf", "wv", "wvc" }, extension) then
     local command = Rifle.orders(absolute, "mediainfo", "exiftool")
-    if command then return try_run(command, buffer, options) end
+    if command then return try_capture(command, buffer, options) end
   elseif mimetype[1] == "text" or vim.tbl_contains({ "lua" }, extension) then
     return true
   end
@@ -159,35 +177,49 @@ local function redirect(buffer, extension, absolute, options)
   return false
 end
 
+---Callback for handling know filetypes i.e. filetypes detected by the `filetype_detect`
+---function from the `telescope.previewer.utils` module.
+---@param filepath string path to the current selection.
+---@param buffer number buffer id of the previewer.
+---@param options table hook configuration options.
+---@return boolean
 local function filetype_hook(filepath, buffer, options)
   local extension = fnamemod(filepath, ":e"):lower()
   local absolute = fnamemod(filepath, ":p")
-  local handler = Scope.supports[extension]
+  local handler = Scope.supports[extension] -- look for a supported handler for the filetype
 
   if handler then
     local file_cachepath
     local backend = options.backend
     local backend_options = if_nil(options.backend_options[backend], {})
     local extra_args = if_nil(backend_options.extra_args, {})
+    -- generate the cache path if the handler is a image type i.e.
+    -- * GIF -> 1 Frame -> PNG ✓
+    -- * PDF -> 1 Page -> PNG ✓
+    -- * TTF -> Rendered -> PNG ✓
+    -- * LUA -> Text -> LUA ❌
     if
       extension == "gif"
       and vim.tbl_contains(Rifle.allows_gifs, backend)
       and backend_options
-      and backend_options.move
+      and backend_options.move -- if backend supports animated GIFs then do not generate a cache path
     then
       file_cachepath = absolute
-    elseif options.backend == "file" then
+    elseif options.backend == "file" then -- if images do not support any backends then use `file` command
       Log.debug("define_preview(): file backend is being used.")
-      return redirect(buffer, extension, absolute, options)
+      return display_metadata(buffer, extension, absolute, options)
     else
       Log.debug("define_preview(): sending to handler")
       file_cachepath = handler(absolute, options.cache_path, options)
     end
+
+    -- display a failure dialog if all else fails
     if file_cachepath == NULL then
       Log.debug("define_preview(): file_cachepath is nil")
-      return redirect(buffer, extension, absolute, options)
+      return display_metadata(buffer, extension, absolute, options)
     end
 
+    -- special handling for ueberzug
     local window_options = options.get_preview_window()
     if options.backend == "ueberzug" then
       Log.debug("define_preview(): ueberzug started for displaying file_cachepath i.e. " .. file_cachepath)
@@ -208,19 +240,25 @@ local function filetype_hook(filepath, buffer, options)
           "- Binary is not in `$PATH`",
           "- Has not been registered into the `rifle.bullets` table.",
         }
+
         vim.notify(table.concat(message, "\n"), ERROR)
         Log.warn("filetype_hook(): " .. table.concat(message, " "))
-        return redirect(buffer, extension, absolute, options)
+        return display_metadata(buffer, extension, absolute, options)
       end
 
-      local parsed_extra_args = Util.parse_args(extra_args, window_options, options)
-      local total_args = ib[backend] + vim.tbl_flatten({ parsed_extra_args, file_cachepath })
+      local parsed_extra_args = Util.parse_args(extra_args, window_options, options) -- user args
+      local total_args = ib[backend] + vim.tbl_flatten({
+        parsed_extra_args,
+        file_cachepath
+      }) -- merged default and user args
       Log.debug("filetype_hook(): arguments generated for " .. backend .. ": " .. table.concat(total_args, " "))
+      -- open the neovim terminal inside of the preview buffer and run the generated backend command
       Util.open_term(buffer, total_args)
       return false
     end
   end
-  return redirect(buffer, extension, absolute, options)
+  -- fallback to `file` command if a handler does not exist
+  return display_metadata(buffer, extension, absolute, options)
 end
 
 local MediaPreview = util.make_default_callable(function(options)
@@ -228,13 +266,16 @@ local MediaPreview = util.make_default_callable(function(options)
   Scope.load_caches(options.cache_path)
   local fill_perm = options.preview.fill.permission
 
+  -- prepare ueberzug
   local ueberzug_options = if_nil(options.backend_options["ueberzug"], {})
   if options.backend == "ueberzug" then
     options._ueberzug = Ueberzug:new(os.tmpname(), not ueberzug_options.warnings)
-    options._ueberzug:listen()
+    options._ueberzug:listen() -- start ueberzug
   end
 
+  -- add hooks
   options.preview.filetype_hook = filetype_hook
+  options.preview.mime_hook = filetype_hook
   options.preview.msg_bg_fillchar = options.preview.fill.mime
 
   return bview.new_buffer_previewer({
@@ -263,7 +304,7 @@ local MediaPreview = util.make_default_callable(function(options)
     end,
     teardown = function()
       if options.backend == "ueberzug" and options._ueberzug then
-        options._ueberzug:kill()
+        options._ueberzug:kill() -- closing the preview will kill the ueberzug process
         options._ueberzug = nil
         Log.info("teardown(): killed ueberzug process.")
       end
