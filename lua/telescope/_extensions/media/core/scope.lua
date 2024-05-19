@@ -1,13 +1,13 @@
 local M = {}
 
-local Path = require("plenary.path")
+local P = require("plenary.path")
 local sha = require("telescope._extensions.media.lib.sha")
 local engine = require("telescope._extensions.media.core.engine")
-local Log = require("telescope._extensions.media.core.log")
+local log = require("telescope._extensions.media.core.log")
 local scandir = require("plenary.scandir")
 
 local V = vim.fn
-local uv = vim.loop
+local U = vim.loop
 local if_nil = vim.F.if_nil
 local NULL = vim.NIL
 
@@ -25,10 +25,10 @@ function M.load_caches(cache_path)
     for _, file in ipairs(files) do
       M.caches[file] = true
     end
-    Log.info("load_caches(): all caches are loaded.")
+    log.info("load_caches(): all caches are loaded.")
   else
     cache_path:mkdir({ parents = true, exists_ok = true })
-    Log.info("load_caches(): cache path does not exist. created.")
+    log.info("load_caches(): cache path does not exist. created.")
   end
 end
 
@@ -39,46 +39,46 @@ function M.cleanup(cache_path)
     on_insert = function(path)
       local stem = V.fnamemodify(path, ":t:r")
       if #stem ~= 128 then
-        path = Path:new(path)
+        path = P:new(path)
         if path:exists() then path:rm() end
       end
     end,
   })
 end
 
-local function encode_options(filepath, cache_path, options)
-  if options.alias then filepath = options.alias end
+local function encode_opts(filepath, cache_path, opts)
+  if opts.alias then filepath = opts.alias end
   ---@diagnostic disable-next-line: param-type-mismatch
-  local encoded_path = sha.sha512(uv.fs_stat(filepath).ino .. filepath):upper() .. ".jpg"
+  local encoded_path = sha.sha512(U.fs_stat(filepath).ino .. filepath):upper() .. ".jpg"
   local cached_path = cache_path.filename .. "/" .. encoded_path
-  Log.debug("encode_options(): created cache entry: " .. cached_path .. " from: " .. filepath)
+  log.debug("encode_options(): created cache entry: " .. cached_path .. " from: " .. filepath)
   return if_nil(M.caches[encoded_path] and cached_path, false), encoded_path, cached_path
 end
 
-function M.handlers.image_handler(image_path, cache_path, options)
-  local in_cache, sha_path, cached_path = encode_options(image_path, cache_path, options)
+function M.handlers.image_handler(image_path, cache_path, opts)
+  local in_cache, sha_path, cached_path = encode_opts(image_path, cache_path, opts)
   if in_cache then return in_cache end
-  engine.magick(image_path, cached_path, options, function() M.caches[sha_path] = true end)
+  engine.magick(image_path, cached_path, opts, function() M.caches[sha_path] = true end)
   return image_path
 end
 
-function M.handlers.font_handler(font_path, cache_path, options)
-  local in_cache, sha_path, cached_path = encode_options(font_path, cache_path, options)
+function M.handlers.font_handler(font_path, cache_path, opts)
+  local in_cache, sha_path, cached_path = encode_opts(font_path, cache_path, opts)
   if in_cache then return in_cache end
-  engine.fontmagick(font_path, cached_path, options, function(self, _)
+  engine.fontmagick(font_path, cached_path, opts, function(self, _)
     if self.code == 0 then M.caches[sha_path] = true end
   end)
   return NULL
 end
 
-function M.handlers.video_handler(video_path, cache_path, options)
-  local in_cache, sha_path, cached_path = encode_options(video_path, cache_path, options)
+function M.handlers.video_handler(video_path, cache_path, opts)
+  local in_cache, sha_path, cached_path = encode_opts(video_path, cache_path, opts)
   if in_cache then return in_cache end
-  engine.ffmpeg(video_path, cached_path, options, function(_, code, _)
+  engine.ffmpeg(video_path, cached_path, opts, function(_, code, _)
     if code == 0 then
       M.caches[sha_path] = true
     else
-      engine.ffmpegthumbnailer(video_path, cached_path, options, function(_, _code, _)
+      engine.ffmpegthumbnailer(video_path, cached_path, opts, function(_, _code, _)
         if _code == 0 then M.caches[sha_path] = true end
       end)
     end
@@ -86,42 +86,42 @@ function M.handlers.video_handler(video_path, cache_path, options)
   return NULL
 end
 
-function M.handlers.gif_handler(gif_path, cache_path, options)
-  local in_cache, sha_path, cached_path = encode_options(gif_path, cache_path, options)
+function M.handlers.gif_handler(gif_path, cache_path, opts)
+  local in_cache, sha_path, cached_path = encode_opts(gif_path, cache_path, opts)
   if in_cache then return in_cache end
-  options.index = "[0]"
-  engine.magick(gif_path, cached_path, options, function(_, code, _)
+  opts.index = "[0]"
+  engine.magick(gif_path, cached_path, opts, function(_, code, _)
     if code == 0 then M.caches[sha_path] = true end
   end)
   return NULL
 end
 
-function M.handlers.audio_handler(audio_path, cache_path, options)
-  local in_cache, sha_path, cached_path = encode_options(audio_path, cache_path, options)
+function M.handlers.audio_handler(audio_path, cache_path, opts)
+  local in_cache, sha_path, cached_path = encode_opts(audio_path, cache_path, opts)
   if in_cache then return in_cache end
-  engine.ffmpeg(audio_path, cached_path, options, function(_, code, _)
+  engine.ffmpeg(audio_path, cached_path, opts, function(_, code, _)
     if code == 0 then M.caches[sha_path] = true end
   end)
   return NULL
 end
 
-function M.handlers.pdf_handler(pdf_path, cache_path, options)
-  local in_cache, sha_path, cached_path = encode_options(pdf_path, cache_path, options)
+function M.handlers.pdf_handler(pdf_path, cache_path, opts)
+  local in_cache, sha_path, cached_path = encode_opts(pdf_path, cache_path, opts)
   if in_cache then return in_cache end
-  engine.pdftoppm(pdf_path, cached_path, options, function(_, code, _)
+  engine.pdftoppm(pdf_path, cached_path, opts, function(_, code, _)
     if code == 0 then M.caches[sha_path] = true end
   end)
   return NULL
 end
 
-function M.handlers.epub_handler(epub_path, cache_path, options)
-  local in_cache, sha_path, cached_path = encode_options(epub_path, cache_path, options)
+function M.handlers.epub_handler(epub_path, cache_path, opts)
+  local in_cache, sha_path, cached_path = encode_opts(epub_path, cache_path, opts)
   if in_cache then return in_cache end
-  engine.epubthumbnailer(epub_path, cached_path, options, function(_, code, _)
+  engine.epubthumbnailer(epub_path, cached_path, opts, function(_, code, _)
     if code == 0 then
       M.caches[sha_path] = true
     else
-      engine.ebookmeta(epub_path, cached_path, options, function(_, child_code, _)
+      engine.ebookmeta(epub_path, cached_path, opts, function(_, child_code, _)
         if child_code == 0 then M.caches[sha_path] = true end
       end)
     end

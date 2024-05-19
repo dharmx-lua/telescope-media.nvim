@@ -106,11 +106,14 @@ This extension should be configured using the `extensions` field inside Telescop
 However, you could also pass a table into the extension call.
 
 ```lua
+-- explore and maybe contribute more
+local canned = require("telescope._extensions.media.lib.canned")
+
 require("telescope").setup({
   extensions = {
     media = {
       backend = "viu", -- image/gif backend
-      backend_options = {
+      flags = {
         viu = {
           move = true, -- GIF preview
         },
@@ -132,36 +135,44 @@ require("telescope").setup({
 
 <!-- {{{ -->
 ```lua
-local defaults = {
-  backend = "none",
-  backend_options = {
-    chafa = { move = false },
+{
+  backend = "file",
+  flags = {
     catimg = { move = false },
+    chafa = { move = false },
     viu = { move = false },
-    pxv = { move = false },
-    ueberzug = { xmove = -1, ymove = -2 },
+    -- cannot calculate terminal paddings adjust them yourselves
+    ueberzug = { xmove = -12, ymove = -3, warnings = true, supress_backend_warning = false },
   },
   callbacks = {
-    on_confirm_single = canned.single.copy_path,
-    on_confirm_muliple = canned.multiple.bulk_copy,
+    on_confirm_single = function(...) require("telescope._extensions.media.lib.canned").single.copy_path(...) end,
+    on_confirm_muliple = function(...) require("telescope._extensions.media.lib.canned").multiple.bulk_copy(...) end,
   },
   cache_path = "/tmp/media",
-  preview_title = "",
-  results_title = "",
+  preview_title = "Preview",
+  results_title = "Files",
   prompt_title = "Media",
   cwd = vim.fn.getcwd(),
   preview = {
+    check_mime_type = true,
     timeout = 200,
     redraw = false,
     wait = 10,
     fill = {
       mime = "",
-      permission = "╱",
-      binary = "X",
       file = "~",
       error = ":",
+      binary = "X",
       timeout = "+",
+      permission = "╱",
     },
+  },
+  log = {
+    plugin = "telescope-media",
+    level = "warn",
+    highlights = true,
+    use_file = true,
+    use_quickfix = false,
   },
 }
 ```
@@ -185,7 +196,7 @@ require("telescope").setup({
   extensions = {
     media = {
       backend = "my_cool_backend",
-      backend_options = {
+      flags = {
         pxv = {
           move = true,
           -- these will be parsed and concatenated into string[]
@@ -194,9 +205,9 @@ require("telescope").setup({
             ["--frames"] = 5, -- after conversion: --frames 5
             -- make sure the returning value is either boolean/string/number
             columns = function(window, options)
-              return window.width
+              return window.w
             end,
-            "-r", function(window, options) return window.height end,
+            "-r", function(window, options) return window.h end,
             "-i",
           },
         },
@@ -209,7 +220,7 @@ require("telescope").load_extension("media")
 -- Use your backend by:
 require("telescope").extensions.media.media({ -- On the fly setup.
   backend = "my_cool_backend",
-  backend_options = {
+  flags = {
     my_cool_backend = {
       move = false,
       extra_args = { "--still" }, -- previous values will be discarded.
@@ -328,6 +339,7 @@ Some of these are optional.
 - [ ] Add `gif2txt` backend.
 - [ ] Add `ascii-image-converter` backend.
 - [x] Add dialog boxes.
+- [ ] Add `ffprobe` backend for videos/gifs.
 - [x] Add `rifle.lua`.
 - [x] Revise `rifle.lua`.
 - [ ] Recalibrate preview size when window is moved.

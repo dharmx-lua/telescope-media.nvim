@@ -1,15 +1,15 @@
 ---@diagnostic disable: need-check-nil
-local Task = require("plenary.job")
-local Path = require("plenary.path")
+local J = require("plenary.job")
+local P = require("plenary.path")
 
 local SIGKILL = 9
 
 ---@class Ueberzug
 ---@field fifo Path path to the fifo file
 ---@field task Job the ueberzug process
-local Ueberzug = {}
+local Uz = {}
 
----@class TailOptions
+---@class TailOpts
 ---@field on_stdout function
 ---@field on_start function
 ---@field on_exit function
@@ -17,21 +17,21 @@ local Ueberzug = {}
 
 ---File watcher function. This requires `tail`.
 ---@param fifo string fifo file
----@param options TailOptions?
+---@param opts TailOpts?
 ---@return Job
-local function tail(fifo, options)
-  options = vim.F.if_nil(options, {})
-  return Task:new({
+local function tail(fifo, opts)
+  opts = vim.F.if_nil(opts, {})
+  return J:new({
     command = "tail",
     args = {
       "--silent",
       "--follow",
       fifo,
     },
-    on_stdout = options.on_stdout,
-    on_start = options.on_start,
-    on_exit = options.on_exit,
-    on_stderr = options.on_stderr,
+    on_stdout = opts.on_stdout,
+    on_start = opts.on_start,
+    on_exit = opts.on_exit,
+    on_stderr = opts.on_stderr,
   })
 end
 
@@ -39,15 +39,15 @@ end
 ---@param fifo string
 ---@param silent boolean
 ---@return table
-function Ueberzug:new(fifo, silent)
+function Uz:new(fifo, silent)
   ---@type Path
   ---@diagnostic disable-next-line: cast-local-type
-  fifo = Path:new(fifo)
+  fifo = P:new(fifo)
   fifo:touch({ parents = true })
 
   local args = { "layer", "--parser", "json" }
   if silent then table.insert(args, 1, "--silent") end
-  local ueberzug_task = Task:new({
+  local ueberzug_task = J:new({
     command = "ueberzug",
     args = args,
     -- tail --follow fifo | ueberzug --silent
@@ -55,7 +55,7 @@ function Ueberzug:new(fifo, silent)
     writer = tail(fifo.filename),
     on_exit = vim.schedule_wrap(function(this, code, signal)
       local errors = vim.trim(table.concat(this:stderr_result(), "\n"))
-      if errors ~= "" then
+      if errors ~= "" and not silent then
         local error_message = "```\n" .. errors .. "\n```"
         vim.notify(string.format("# ueberzug exited with code `%s` and signal `%s`.\n%s", code, signal, error_message))
       end
@@ -67,13 +67,13 @@ function Ueberzug:new(fifo, silent)
 end
 
 ---Start the ueberzug process
-function Ueberzug:listen() self.task:start() end
+function Uz:listen() self.task:start() end
 
 ---Remove the fifo file
-function Ueberzug:clean() self.fifo:rm() end
+function Uz:clean() self.fifo:rm() end
 
 ---Kill the ueberzug process
-function Ueberzug:kill()
+function Uz:kill()
   assert(self.task, "Ueberzug task is not running!")
   ---@diagnostic disable-next-line: param-type-mismatch
   vim.loop.kill(self.task.writer.pid, SIGKILL)
@@ -82,7 +82,7 @@ end
 
 ---Send a payload to ueberzug this will be used to display messages.
 ---@param message table<string, string|number> payload that is to be sent to ueberzug
-function Ueberzug:send(message)
+function Uz:send(message)
   local defaults = {
     action = "add",
     identifier = "media",
@@ -97,11 +97,11 @@ function Ueberzug:send(message)
 end
 
 ---Hide the ueberzug window
-function Ueberzug:hide()
+function Uz:hide()
   self:send({
     action = "remove",
     identifier = "media",
   })
 end
 
-return Ueberzug
+return Uz

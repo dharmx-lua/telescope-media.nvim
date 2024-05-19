@@ -1,47 +1,47 @@
 local M = {}
 
-local Task = require("plenary.job")
+local J = require("plenary.job")
 local fnamemodify = vim.fn.fnamemodify
-local Log = require("telescope._extensions.media.core.log")
+local log = require("telescope._extensions.media.core.log")
 
----@class MagickOptions
+---@class MagickOpts
 ---@field quality string Reduce quality in percentages. Example "20%"
 ---@field blurred number a blur value between 0.0 and 1.0. Inclusive.
 ---@field interlace "Line"|"None"|"Partition"|"Plane" see ImageMagick documentation.
 ---@field frame string frame number. Example: "[0]" i.e. the first frame.
 
----@class FontMagickOptions
+---@class FontMagickOpts
 ---@field fill string hex color string for the foreground of the rendered image.
 ---@field background string hex color string for the background of the rendered image.
 ---@field pointsize string fontsize.
 ---@field text_lines string[] text to render.
 
----@class FfmpegOptions
+---@class FfmpegOpts
 ---@field map_start string input_file_index:stream_type_specifier:stream_index
 ---@field map_finish string same as map_start and see <https://trac.ffmpeg.org/wiki/Map>.
 ---@field loglevel string|number
 
----@class FfmpegThumbnailerOptions
+---@class FfmpegThumbnailerOpts
 ---@field size number|string size of the thumbnail. Default: "0".
 ---@field time string frame to seek. Example: "10%".
 
----@class PdfToppmOptions
+---@class PdfToppmOpts
 ---@field scale_to_x string|number scales each page horizontally to fit in scale-to-x pixels,
 ---@field scale_to_y string|number scales each page vertically to fit in scale-to-y pixels.
 ---@field first_page string|number first page to print.
 ---@field last_page string|number last page to print
 
 ---Ready-made task helper function.
----@param options table same as what `Job` uses.
+---@param opts table same as what `Job` uses.
 ---@return Job
-local function primed_task(options)
-  local task = Task:new(vim.tbl_extend("keep", options, {
+local function primed_task(opts)
+  local task = J:new(vim.tbl_extend("keep", opts, {
     interactive = false,
     enable_handlers = false,
     enable_recording = false,
   }))
 
-  Log.debug("primed_task(): started a task with command: " .. task.command .. " and args: " .. table.concat(task.args, " "))
+  log.debug("primed_task(): started a task with command: " .. task.command .. " and args: " .. table.concat(task.args, " "))
   task:start()
   return task
 end
@@ -49,11 +49,11 @@ end
 ---Descaler for images. Including GIF. This reduces quality, adds blur to the image.
 ---@param input_path string path to the image file.
 ---@param output_path string path to the descaled image.
----@param options MagickOptions extra options to change the output behavior.
+---@param opts MagickOpts extra options to change the output behavior.
 ---@param on_exit function to run after the output image has been generated.
 ---@return Job
-function M.magick(input_path, output_path, options, on_exit)
-  options = vim.tbl_extend("keep", options, {
+function M.magick(input_path, output_path, opts, on_exit)
+  opts = vim.tbl_extend("keep", opts, {
     quality = "20%",
     blurred = "0.06",
     interlace = "Plane",
@@ -65,12 +65,12 @@ function M.magick(input_path, output_path, options, on_exit)
     args = {
       "-strip",
       "-interlace",
-      options.interlace,
+      opts.interlace,
       "-gaussian-blur",
-      options.blurred,
+      opts.blurred,
       "-quality",
-      options.quality,
-      input_path .. options.frame,
+      opts.quality,
+      input_path .. opts.frame,
       output_path,
     },
     on_exit = on_exit,
@@ -80,11 +80,11 @@ end
 ---Renders specified font characters to an image using ImageMagick.
 ---@param font_path string path to the font file.
 ---@param output_path string path to where the rendered image will be created.
----@param options FontMagickOptions extra options to change the way the rendered image will be generated.
+---@param opts FontMagickOpts extra options to change the way the rendered image will be generated.
 ---@param on_exit function to run after the image has been generated.
 ---@return Job
-function M.fontmagick(font_path, output_path, options, on_exit)
-  options = vim.tbl_extend("keep", options, {
+function M.fontmagick(font_path, output_path, opts, on_exit)
+  opts = vim.tbl_extend("keep", opts, {
     fill = "#000000",
     background = "#FFFFFF",
     pointsize = "100",
@@ -110,18 +110,18 @@ function M.fontmagick(font_path, output_path, options, on_exit)
       "-strip",
       "-size",
       "5000x3000",
-      "xc:" .. options.background,
+      "xc:" .. opts.background,
       "-gravity",
       "center",
       "-pointsize",
-      options.pointsize,
+      opts.pointsize,
       "-font",
       font_path,
       "-fill",
-      options.fill,
+      opts.fill,
       "-annotate",
       "+0+0",
-      table.concat(options.text_lines, "\n"),
+      table.concat(opts.text_lines, "\n"),
       "-flatten",
       output_path,
     },
@@ -132,11 +132,11 @@ end
 ---Extract a frame from a video using ffmpeg.
 ---@param input_path string path to the video file.
 ---@param output_path string path to the extracted frame.
----@param options FfmpegOptions extra behavioral options.
+---@param opts FfmpegOpts extra behavioral options.
 ---@param on_exit function callback to run after extraction of the frame is complete.
 ---@return Job
-function M.ffmpeg(input_path, output_path, options, on_exit)
-  options = vim.tbl_extend("keep", options, {
+function M.ffmpeg(input_path, output_path, opts, on_exit)
+  opts = vim.tbl_extend("keep", opts, {
     map_start = "0:v",
     map_finish = "0:V?",
     loglevel = "8",
@@ -148,13 +148,13 @@ function M.ffmpeg(input_path, output_path, options, on_exit)
       "-i",
       input_path,
       "-map",
-      options.map_start,
+      opts.map_start,
       "-map",
-      options.map_finish,
+      opts.map_finish,
       "-c",
       "copy",
       "-v",
-      options.loglevel,
+      opts.loglevel,
       output_path,
     },
     on_exit = on_exit,
@@ -164,11 +164,11 @@ end
 ---Generate a thumbnail from a video file.
 ---@param input_path string path to the video file.
 ---@param output_path string generated path to the thumbnail.
----@param options FfmpegThumbnailerOptions extra behavioral options.
+---@param opts FfmpegThumbnailerOpts extra behavioral options.
 ---@param on_exit function callback to run after generating the thumbnail image.
 ---@return Job
-function M.ffmpegthumbnailer(input_path, output_path, options, on_exit)
-  options = vim.tbl_extend("keep", options, {
+function M.ffmpegthumbnailer(input_path, output_path, opts, on_exit)
+  opts = vim.tbl_extend("keep", opts, {
     size = "0",
     time = "10%",
   })
@@ -178,8 +178,8 @@ function M.ffmpegthumbnailer(input_path, output_path, options, on_exit)
     args = {
       "-i", input_path,
       "-o", output_path,
-      "-s", options.size,
-      "-t", options.time,
+      "-s", opts.size,
+      "-t", opts.time,
     },
     on_exit = on_exit,
   })
@@ -188,11 +188,11 @@ end
 ---Extract a page from a PDF file as an image.
 ---@param pdf_path string path to the PDF file.
 ---@param output_path string path to the extracted image.
----@param options PdfToppmOptions extra options.
+---@param opts PdfToppmOpts extra options.
 ---@param on_exit function callback to run after extraction of the page is complete.
 ---@return Job
-function M.pdftoppm(pdf_path, output_path, options, on_exit)
-  options = vim.tbl_extend("keep", options, {
+function M.pdftoppm(pdf_path, output_path, opts, on_exit)
+  opts = vim.tbl_extend("keep", opts, {
     scale_to_x = "-1",
     scale_to_y = "-1",
     first_page = "1",
@@ -202,10 +202,10 @@ function M.pdftoppm(pdf_path, output_path, options, on_exit)
   return primed_task({
     command = "pdftoppm",
     args = {
-      "-f", options.first_page,
-      "-l", options.last_page,
-      "-scale-to-x", options.scale_to_x,
-      "-scale-to-y", options.scale_to_y,
+      "-f", opts.first_page,
+      "-l", opts.last_page,
+      "-scale-to-x", opts.scale_to_x,
+      "-scale-to-y", opts.scale_to_y,
       "-singlefile",
       "-jpeg",
       "-tiffcompression",
@@ -220,18 +220,18 @@ end
 ---Generate a thumbnail from an EPUB file.
 ---@param input_path string path to the EPUB file.
 ---@param output_path string path to the generated thumbnail file.
----@param options {size:string|number} extra options. See `epub-thumbnailer` help page.
+---@param opts {size:string|number} extra options. See `epub-thumbnailer` help page.
 ---@param on_exit function to run after the thumbnail has been generated.
 ---@return Job
-function M.epubthumbnailer(input_path, output_path, options, on_exit)
-  options = vim.tbl_extend("keep", options, { size = "2000" })
+function M.epubthumbnailer(input_path, output_path, opts, on_exit)
+  opts = vim.tbl_extend("keep", opts, { size = "2000" })
 
   return primed_task({
     command = "epub-thumbnailer",
     args = {
       input_path,
       output_path,
-      options.size,
+      opts.size,
     },
     on_exit = on_exit,
   })

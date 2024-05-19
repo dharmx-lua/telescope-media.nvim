@@ -2,7 +2,7 @@ local M = {}
 
 local A = vim.api
 local termopen = vim.fn.termopen
-local Task = require("plenary.job")
+local J = require("plenary.job")
 
 ---Encode a lua table into a string array of command line arguments.
 ---Consider the following table:
@@ -11,10 +11,10 @@ local Task = require("plenary.job")
 ---  size = "fit", -- after conversion: --size fit
 ---  ["--frames"] = 5, -- after conversion: --frames 5
 ---  -- make sure the returning value is either boolean/string/number
----  columns = function(window, options)
+---  columns = function(window, opts)
 ---    return window.width
 ---  end,
----  "-r", function(window, options) return window.height end,
+---  "-r", function(window, opts) return window.height end,
 ---  "-i",
 ---}
 ---```
@@ -131,7 +131,7 @@ function M.open_term(buffer, command)
       return false
     end
 
-    Task:new({
+    J:new({
       command = table.remove(command, 1),
       args = command,
       on_stdout = vim.schedule_wrap(function(errors, data, _)
@@ -162,6 +162,22 @@ function M.termopen(buffer, command)
     end
   end)
   return false
+end
+
+function M.preview_geometry(opts)
+  -- current height (lines) of the terminal for ueberzug
+  local rows = vim.go.lines - vim.go.cmdheight
+  if vim.go.laststatus ~= 0 then rows = rows - 1 end
+
+  local width = vim.api.nvim_win_get_width(opts.preview.winid)
+  local height = vim.api.nvim_win_get_height(opts.preview.winid)
+
+  local geometry = {}
+  geometry.x = vim.go.columns - width
+  geometry.y = rows - height
+  geometry.w = width
+  geometry.h = height
+  return geometry
 end
 
 return M

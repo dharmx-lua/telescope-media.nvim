@@ -14,23 +14,23 @@ local if_nil = vim.F.if_nil
 local actions = require("telescope.actions")
 local finders = require("telescope.finders")
 local pickers = require("telescope.pickers")
-local config = require("telescope.config")
+local tconf = require("telescope.config")
 
 local actions_state = require("telescope.actions.state")
 local make_entry = require("telescope.make_entry")
 
 local MediaPreviewer = require("telescope._extensions.media.preview")
-local Config = require("telescope._extensions.media.core.config")
-local Log = require("telescope._extensions.media.core.log")
+local config = require("telescope._extensions.media.core.config")
+local log = require("telescope._extensions.media.core.log")
 
 ---Picker function.
----@param options MediaConfig telescope-media.nvim configuration table.
-local function media(options)
-  options = if_nil(options, {})
-  options.backend_options = if_nil(options.backend_options, {})
-  options.backend_options.ueberzug = if_nil(options.backend_options.ueberzug, {})
+---@param opts MediaConfig telescope-media.nvim configuration table.
+local function media(opts)
+  opts = if_nil(opts, {})
+  opts.flags = if_nil(opts.flags, {})
+  opts.flags.ueberzug = if_nil(opts.flags.ueberzug, {})
   -- TODO: Remove if fixed. See #9.
-  if options.backend == "ueberzug" and not options.backend_options.ueberzug.supress_backend_warning then
+  if opts.backend == "ueberzug" and not opts.flags.ueberzug.supress_backend_warning then
     local message = {
       "# See issue `#9`.\n",
       "**Ueberzug** might not work properly.",
@@ -44,99 +44,91 @@ local function media(options)
     })
   end
 
-  options.attach_mappings = if_nil(options.attach_mappings, function()
+  opts.attach_mappings = if_nil(opts.attach_mappings, function()
     actions.select_default:replace(function(prompt_buffer)
       local current_picker = actions_state.get_current_picker(prompt_buffer)
       local selections = current_picker:get_multi_selection()
 
-      Log.debug("media(): picker window has been closed")
+      log.debug("media(): picker window has been closed")
       actions.close(prompt_buffer)
       if #selections < 2 then
-        Log.debug("media(): selections are lesser than 2 - calling Callbacks.on_confirm_single...")
-        options.callbacks.on_confirm_single(actions_state.get_selected_entry()) -- handle single selections
+        log.debug("media(): selections are lesser than 2 - calling Callbacks.on_confirm_single...")
+        opts.callbacks.on_confirm_single(actions_state.get_selected_entry()) -- handle single selections
       else
-        Log.debug("media(): selections are greater than 2 - calling Callbacks.on_confirm_multiple...")
+        log.debug("media(): selections are greater than 2 - calling Callbacks.on_confirm_multiple...")
         selections = vim.tbl_map(function(item) return item[1] end, selections)
-        options.callbacks.on_confirm_muliple(selections) -- handle multiple selections
+        opts.callbacks.on_confirm_muliple(selections) -- handle multiple selections
       end
     end)
     return true
   end)
 
-  options = Config.extend(options) -- merge and return new value
+  opts = config.extend(opts) -- merge and return new value
 
-  -- Adapted from https://github.com/nvim-telescope/telescope.nvim/blob/master/lua/telescope/builtin/__files.lua#L243-L355 {{{
-  local command = options.find_command[1]
-  if options.search_dirs then
-    for key, value in pairs(options.search_dirs) do
-      options.search_dirs[key] = vim.fn.expand(value)
+  -- Adapted from https://github.com/nvim-telescope/telescope.nvim/blob/0c12735d5aff6a48ffd8111bf144dc2ff44e5975/lua/telescope/builtin/__files.lua#L243-L355 {{{
+  local command = opts.find_command[1]
+  if opts.search_dirs then
+    for key, value in pairs(opts.search_dirs) do
+      opts.search_dirs[key] = vim.fn.expand(value)
     end
   end
 
   if command == "fd" or command == "fdfind" or command == "rg" then
-    if options.hidden then options.find_command[#options.find_command + 1] = "--hidden" end
-    if options.no_ignore then options.find_command[#options.find_command + 1] = "--no-ignore" end
-    if options.no_ignore_parent then options.find_command[#options.find_command + 1] = "--no-ignore-parent" end
-    if options.follow then options.find_command[#options.find_command + 1] = "-L" end
-    if options.search_file then
+    if opts.hidden then opts.find_command[#opts.find_command + 1] = "--hidden" end
+    if opts.no_ignore then opts.find_command[#opts.find_command + 1] = "--no-ignore" end
+    if opts.no_ignore_parent then opts.find_command[#opts.find_command + 1] = "--no-ignore-parent" end
+    if opts.follow then opts.find_command[#opts.find_command + 1] = "-L" end
+    if opts.search_file then
       if command == "rg" then
-        options.find_command[#options.find_command + 1] = "-g"
-        options.find_command[#options.find_command + 1] = "*" .. options.search_file .. "*"
+        opts.find_command[#opts.find_command + 1] = "-g"
+        opts.find_command[#opts.find_command + 1] = "*" .. opts.search_file .. "*"
       else
         ---@diagnostic disable-next-line: assign-type-mismatch
-        options.find_command[#options.find_command + 1] = options.search_file
+        opts.find_command[#opts.find_command + 1] = opts.search_file
       end
     end
-    if options.search_dirs then
-      if command ~= "rg" and not options.search_file then options.find_command[#options.find_command + 1] = "." end
-      vim.list_extend(options.find_command, options.search_dirs)
+    if opts.search_dirs then
+      if command ~= "rg" and not opts.search_file then opts.find_command[#opts.find_command + 1] = "." end
+      vim.list_extend(opts.find_command, opts.search_dirs)
     end
   elseif command == "find" then
-    if not options.hidden then
-      table.insert(options.find_command, { "-not", "-path", "*/.*" })
-      options.find_command = vim.tbl_flatten(options.find_command)
+    if not opts.hidden then
+      table.insert(opts.find_command, { "-not", "-path", "*/.*" })
+      opts.find_command = vim.tbl_flatten(opts.find_command)
     end
-    if options.no_ignore ~= nil then
+    if opts.no_ignore ~= nil then
       vim.notify("The 'no_ignore' key is not available for the 'find' command in 'find_files'.")
     end
-    if options.no_ignore_parent ~= nil then
+    if opts.no_ignore_parent ~= nil then
       vim.notify("The 'no_ignore_parent' key is not available for the 'find' command in 'find_files'.")
     end
-    if options.follow then table.insert(options.find_command, 2, "-L") end
-    if options.search_file then
-      table.insert(options.find_command, "-name")
-      table.insert(options.find_command, "*" .. options.search_file .. "*")
+    if opts.follow then table.insert(opts.find_command, 2, "-L") end
+    if opts.search_file then
+      table.insert(opts.find_command, "-name")
+      table.insert(opts.find_command, "*" .. opts.search_file .. "*")
     end
-    if options.search_dirs then
-      table.remove(options.find_command, 2)
-      for _, value in pairs(options.search_dirs) do
-        table.insert(options.find_command, 2, value)
+    if opts.search_dirs then
+      table.remove(opts.find_command, 2)
+      for _, value in pairs(opts.search_dirs) do
+        table.insert(opts.find_command, 2, value)
       end
     end
   end
   -- }}}
 
-  local popup_options = {}
-  function options.get_preview_window() return popup_options.preview end
-  options.entry_maker = make_entry.gen_from_file(options) -- supports devicons
-  local picker = pickers.new(options, {
+  opts.entry_maker = make_entry.gen_from_file(opts) -- supports devicons
+  local picker = pickers.new(opts, {
     prompt_title = "Media",
-    finder = finders.new_oneshot_job(options.find_command, options),
-    previewer = MediaPreviewer.new(options),
-    sorter = config.values.file_sorter(options),
+    finder = finders.new_oneshot_job(opts.find_command, opts),
+    previewer = MediaPreviewer.new(opts),
+    sorter = tconf.values.file_sorter(opts),
   })
 
-  -- current height (lines) of the terminal for ueberzug
-  local line_count = vim.o.lines - vim.o.cmdheight
-  if vim.o.laststatus ~= 0 then line_count = line_count - 1 end
-
-  ---@diagnostic disable-next-line: undefined-field
-  popup_options = picker:get_window_options(vim.o.columns, line_count)
-  Log.debug("media(): picker has been opened")
+  log.debug("media(): picker has been opened")
   picker:find()
 end
 
 return telescope.register_extension({
-  setup = Config.merge,
+  setup = config.merge,
   exports = { media = media },
 })

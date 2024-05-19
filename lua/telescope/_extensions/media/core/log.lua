@@ -1,7 +1,7 @@
 local M = {}
 
-local Log = require("telescope._extensions.media.lib.log")
-local Config = require("telescope._extensions.media.core.config").get()
+local log = require("telescope._extensions.media.lib.log")
+local config = require("telescope._extensions.media.core.config").get()
 
 ---@class Log
 ---@field debug function
@@ -10,7 +10,7 @@ local Config = require("telescope._extensions.media.core.config").get()
 ---@field warn function
 ---@field info function
 ---@field fatal function
-M._log = Log.new(Config.log)
+M._log = log.new(config.log)
 
 ---An organised way to log errors. This logs the error message into the
 ---log file and also displays that message as a notification.
