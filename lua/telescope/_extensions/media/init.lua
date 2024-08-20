@@ -30,7 +30,7 @@ local function media(opts)
   opts.flags = if_nil(opts.flags, {})
   opts.flags.ueberzug = if_nil(opts.flags.ueberzug, {})
   -- TODO: Remove if fixed. See #9.
-  if opts.backend == "ueberzug" and not opts.flags.ueberzug.supress_backend_warning then
+  if opts.backend == "ueberzug" and not opts.flags.ueberzug.suppress_backend_warning then
     local message = {
       "# See issue `#9`.\n",
       "**Ueberzug** might not work properly.",
@@ -57,7 +57,7 @@ local function media(opts)
       else
         log.debug("media(): selections are greater than 2 - calling Callbacks.on_confirm_multiple...")
         selections = vim.tbl_map(function(item) return item[1] end, selections)
-        opts.callbacks.on_confirm_muliple(selections) -- handle multiple selections
+        opts.callbacks.on_confirm_multiple(selections) -- handle multiple selections
       end
     end)
     return true

@@ -27,7 +27,7 @@ local executable = vim.fn.executable
 ---@field xmove number xoffset
 ---@field ymove number yoffset
 ---@field warnings boolean display warning messages
----@field supress_backend_warning boolean supress warning: https://github.com/dharmx/telescope-media.nvim/issues/9
+---@field suppress_backend_warning boolean suppress warning: https://github.com/dharmx/telescope-media.nvim/issues/9
 
 ---@class SharedBackendOpts
 ---@field move boolean allow rendering gifs
@@ -35,7 +35,7 @@ local executable = vim.fn.executable
 
 ---@class Callbacks
 ---@field on_confirm_single function when only one entry has been selected
----@field on_confirm_muliple function when more than one entries has been selected
+---@field on_confirm_multiple function when more than one entries has been selected
 
 ---@class Flags
 ---@field catimg SharedBackendOpts options for the catimg backend
@@ -60,7 +60,7 @@ local executable = vim.fn.executable
 ---@field no_ignore boolean ignore files/directories
 ---@field no_ignore_parent boolean ignore parent files/directories
 ---@field follow boolean boolean follow for changes
----@field search_file boolean search in a specifc file
+---@field search_file boolean search in a specific file
 
 ---The default telescope-media.nvim configuration table.
 ---@type MediaConfig
@@ -70,11 +70,11 @@ M._defaults = {
     catimg = { move = false },
     chafa = { move = false },
     viu = { move = false },
-    ueberzug = { xmove = -12, ymove = -3, warnings = true, supress_backend_warning = false },
+    ueberzug = { xmove = -12, ymove = -3, warnings = true, suppress_backend_warning = false },
   },
   callbacks = {
     on_confirm_single = function(...) require("telescope._extensions.media.lib.canned").single.copy_path(...) end,
-    on_confirm_muliple = function(...) require("telescope._extensions.media.lib.canned").multiple.bulk_copy(...) end,
+    on_confirm_multiple = function(...) require("telescope._extensions.media.lib.canned").multiple.bulk_copy(...) end,
   },
   cache_path = "/tmp/media",
   preview_title = "Preview",
